@@ -20,7 +20,14 @@
  */
 package com.google.android.libraries.mediaframework.exoplayerextensions;
 
+import android.content.Context;
+import android.media.AudioManager;
+import android.media.MediaCodec;
+import android.os.Handler;
+import android.util.Log;
+
 import com.google.android.exoplayer.DefaultLoadControl;
+import com.google.android.exoplayer.ExoPlayer;
 import com.google.android.exoplayer.LoadControl;
 import com.google.android.exoplayer.MediaCodecAudioTrackRenderer;
 import com.google.android.exoplayer.MediaCodecSelector;
@@ -48,11 +55,6 @@ import com.google.android.exoplayer.upstream.DefaultUriDataSource;
 import com.google.android.exoplayer.util.ManifestFetcher;
 import com.google.android.exoplayer.util.ManifestFetcher.ManifestCallback;
 import com.google.android.libraries.mediaframework.exoplayerextensions.ExoplayerWrapper.RendererBuilder;
-
-import android.content.Context;
-import android.media.AudioManager;
-import android.media.MediaCodec;
-import android.os.Handler;
 
 import java.io.IOException;
 import java.util.List;
@@ -181,16 +183,47 @@ public class HlsRendererBuilder implements RendererBuilder {
       }
       TrackRenderer textRenderer;
       if (preferWebvtt) {
+        Log.d("HlsRendererBuilder", "loadingWebVtt");
         DataSource textDataSource = new DefaultUriDataSource(context, bandwidthMeter, userAgent);
         HlsChunkSource textChunkSource = new HlsChunkSource(false /* isMaster */, textDataSource,
                 url, manifest, DefaultHlsTrackSelector.newSubtitleInstance(), bandwidthMeter,
                 timestampAdjusterProvider, HlsChunkSource.ADAPTIVE_MODE_SPLICE);
         HlsSampleSource textSampleSource = new HlsSampleSource(textChunkSource, loadControl,
                 TEXT_BUFFER_SEGMENTS * BUFFER_SEGMENT_SIZE, mainHandler, player, ExoplayerWrapper.TYPE_TEXT);
+//        MediaFormat mediaFormat = MediaFormat.createTextFormat("id", MimeTypes.TEXT_VTT, MediaFormat.NO_VALUE,
+//                C.MATCH_LONGEST_US, "en");
+//        SingleSampleSource textSampleSource = new SingleSampleSource(Uri.parse("https://html5multimedia.com/code/ch8/elephants-dream-subtitles-en.vtt"), textDataSource, mediaFormat);
+//        SingleSampleSource textSampleSource = new SingleSampleSource(Uri.parse("http://s3.amazonaws.com/curiosity-club/testing/hls_subs3/abc_enigmaman.vtt"), textDataSource, mediaFormat);
         textRenderer = new TextTrackRenderer(textSampleSource, player, mainHandler.getLooper());
+
+//        player.setCaptionListener(new ExoplayerWrapper.CaptionListener() {
+//          @Override
+//          public void onCues(List<Cue> cues) {
+//            Log.d("HlsRendererBuilder", "onCues");
+//            if (cues != null) {
+//              for (Cue cue : cues) {
+//                Log.d("HlsRendererBuilder", "cue: " + cue.text);
+//              }
+//            }
+//          }
+//        });
+//
+//        player.setTextListener(new ExoplayerWrapper.TextListener() {
+//          @Override
+//          public void onText(String text) {
+//            Log.d("HlsRendererBuilder", "onText: " + text);
+//          }
+//        });
+
+
       } else {
         textRenderer = new Eia608TrackRenderer(sampleSource, player, mainHandler.getLooper());
       }
+      Log.d("HlsRendererBuilder", "getSelectedTrack: " + player.getSelectedTrack(ExoplayerWrapper.TYPE_TEXT));
+      player.setSelectedTrack(ExoplayerWrapper.TYPE_TEXT, ExoPlayer.TRACK_DEFAULT);
+//      player.setSelectedTrack(ExoplayerWrapper.TYPE_TEXT, ExoplayerWrapper.DISABLED_TRACK);
+      Log.d("HlsRendererBuilder", "getSelectedTrack: " + player.getSelectedTrack(ExoplayerWrapper.TYPE_TEXT));
+
 
       TrackRenderer[] renderers = new TrackRenderer[ExoplayerWrapper.RENDERER_COUNT];
       renderers[ExoplayerWrapper.TYPE_VIDEO] = videoRenderer;

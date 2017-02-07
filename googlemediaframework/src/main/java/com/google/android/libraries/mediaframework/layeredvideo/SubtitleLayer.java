@@ -16,22 +16,32 @@
 
 package com.google.android.libraries.mediaframework.layeredvideo;
 
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.FrameLayout;
-import android.widget.TextView;
 
+import com.google.android.exoplayer.text.Cue;
+import com.google.android.exoplayer.text.SubtitleLayout;
 import com.google.android.libraries.mediaframework.R;
 import com.google.android.libraries.mediaframework.exoplayerextensions.ExoplayerWrapper;
+
+import java.util.List;
+
+import static com.google.android.libraries.mediaframework.R.id.subtitles;
 
 /**
  * Creates a view which displays subtitles.
  */
-public class SubtitleLayer implements Layer, ExoplayerWrapper.TextListener {
+public class SubtitleLayer implements Layer, ExoplayerWrapper.TextListener, ExoplayerWrapper.CaptionListener {
+
+  private static final String TAG = SubtitleLayer.class.getSimpleName();
 
   /**
    * The text view that displays the subtitles.
    */
-  private TextView subtitles;
+//  private TextView subtitles;
+  private SubtitleLayout subtitleLayout;
 
   /**
    * The view that is created by this layer (it contains SubtitleLayer#subtitles).
@@ -43,9 +53,11 @@ public class SubtitleLayer implements Layer, ExoplayerWrapper.TextListener {
     LayoutInflater inflater = layerManager.getActivity().getLayoutInflater();
 
     view = (FrameLayout) inflater.inflate(R.layout.subtitle_layer, null);
-    subtitles = (TextView) view.findViewById(R.id.subtitles);
+//    subtitles = (TextView) view.findViewById(subtitles);
+    subtitleLayout = (SubtitleLayout) view.findViewById(subtitles);
 
     layerManager.getExoplayerWrapper().setTextListener(this);
+
     return view;
   }
 
@@ -60,7 +72,8 @@ public class SubtitleLayer implements Layer, ExoplayerWrapper.TextListener {
    */
   @Override
   public void onText(String text) {
-    this.subtitles.setText(text);
+    Log.d(TAG, "onText: " + text);
+//    this.subtitles.setText(text);
   }
 
   /**
@@ -70,5 +83,21 @@ public class SubtitleLayer implements Layer, ExoplayerWrapper.TextListener {
    */
   public void setVisibility(int visibility) {
     view.setVisibility(visibility);
+  }
+
+  @Override
+  public void onCues(List<Cue> cues) {
+    Log.d(TAG, "onCues: " + cues);
+    if (cues != null) {
+      setVisibility(View.VISIBLE);
+      String text = "";
+      for (Cue cue : cues) {
+        Log.d(TAG, "cue: " + cue.text);
+        text += cue.text + "\n";
+      }
+      Log.d(TAG, "text: " + text);
+//      this.subtitles.setText(text);
+      this.subtitleLayout.setCues(cues);
+    }
   }
 }
