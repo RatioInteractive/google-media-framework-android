@@ -47,11 +47,16 @@ public class Video {
   private final String contentId;
 
   /**
+   * WebVTT Sidecar URL for captions
+   */
+  private final String webVTTSidecarUrl;
+
+  /**
    * @param url The URL pointing to the video.
    * @param videoType The video format of the video.
    */
   public Video(String url, VideoType videoType) {
-    this(url, videoType, null);
+    this(url, videoType, null, null);
   }
 
   /**
@@ -59,10 +64,11 @@ public class Video {
    * @param videoType The video format of the video.
    * @param contentId ID of content (for DASH).
    */
-  public Video(String url, VideoType videoType, String contentId) {
+  public Video(String url, VideoType videoType, String contentId, String webVTTSidecarUrl) {
     this.url = url;
     this.videoType = videoType;
     this.contentId = contentId;
+    this.webVTTSidecarUrl = webVTTSidecarUrl;
   }
 
   /**
@@ -84,5 +90,12 @@ public class Video {
    */
   public VideoType getVideoType() {
     return videoType;
+  }
+
+  /**
+   * Returns the WebVTT Sidecar URL
+   */
+  public String getWebVTTSidecarUrl() {
+    return webVTTSidecarUrl;
   }
 }

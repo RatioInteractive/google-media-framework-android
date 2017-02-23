@@ -33,8 +33,7 @@ public class RendererBuilderFactory {
                                                                        Video video) {
     switch (video.getVideoType()) {
       case HLS:
-        return new HlsRendererBuilder(ctx, ExoplayerUtil.getUserAgent(ctx),
-                                      video.getUrl());
+        return new HlsRendererBuilder(ctx, ExoplayerUtil.getUserAgent(ctx), video.getUrl(), video.getWebVTTSidecarUrl());
       case DASH:
         return new DashRendererBuilder(ctx, ExoplayerUtil.getUserAgent(ctx),
                                        video.getUrl(),

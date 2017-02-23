@@ -23,16 +23,19 @@ package com.google.android.libraries.mediaframework.exoplayerextensions;
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.MediaCodec;
+import android.net.Uri;
 import android.os.Handler;
-import android.util.Log;
 
+import com.google.android.exoplayer.C;
 import com.google.android.exoplayer.DefaultLoadControl;
-import com.google.android.exoplayer.ExoPlayer;
 import com.google.android.exoplayer.LoadControl;
 import com.google.android.exoplayer.MediaCodecAudioTrackRenderer;
 import com.google.android.exoplayer.MediaCodecSelector;
 import com.google.android.exoplayer.MediaCodecUtil.DecoderQueryException;
 import com.google.android.exoplayer.MediaCodecVideoTrackRenderer;
+import com.google.android.exoplayer.MediaFormat;
+import com.google.android.exoplayer.SampleSource;
+import com.google.android.exoplayer.SingleSampleSource;
 import com.google.android.exoplayer.TrackRenderer;
 import com.google.android.exoplayer.audio.AudioCapabilities;
 import com.google.android.exoplayer.chunk.VideoFormatSelectorUtil;
@@ -54,6 +57,7 @@ import com.google.android.exoplayer.upstream.DefaultBandwidthMeter;
 import com.google.android.exoplayer.upstream.DefaultUriDataSource;
 import com.google.android.exoplayer.util.ManifestFetcher;
 import com.google.android.exoplayer.util.ManifestFetcher.ManifestCallback;
+import com.google.android.exoplayer.util.MimeTypes;
 import com.google.android.libraries.mediaframework.exoplayerextensions.ExoplayerWrapper.RendererBuilder;
 
 import java.io.IOException;
@@ -71,21 +75,23 @@ public class HlsRendererBuilder implements RendererBuilder {
   private final Context context;
   private final String userAgent;
   private final String url;
+  private final String webVTTSidecarUrl;
 
   private ExoplayerWrapper player;
 
   private AsyncRendererBuilder currentAsyncBuilder;
 
-  public HlsRendererBuilder(Context context, String userAgent, String url) {
+  public HlsRendererBuilder(Context context, String userAgent, String url, String webVTTSidecarUrl) {
     this.context = context;
     this.userAgent = userAgent;
     this.url = url;
+    this.webVTTSidecarUrl = webVTTSidecarUrl;
   }
 
   @Override
   public void buildRenderers(ExoplayerWrapper player) {
     this.player = player;
-    currentAsyncBuilder = new AsyncRendererBuilder(context, userAgent, url, player);
+    currentAsyncBuilder = new AsyncRendererBuilder(context, userAgent, url, webVTTSidecarUrl, player);
     currentAsyncBuilder.init();
   }
 
@@ -102,15 +108,17 @@ public class HlsRendererBuilder implements RendererBuilder {
     private final Context context;
     private final String userAgent;
     private final String url;
+    private final String webVTTSidecarUrl;
     private final ExoplayerWrapper player;
     private final ManifestFetcher<HlsPlaylist> playlistFetcher;
 
     private boolean canceled;
 
-    public AsyncRendererBuilder(Context context, String userAgent, String url, ExoplayerWrapper player) {
+    public AsyncRendererBuilder(Context context, String userAgent, String url, String webVTTSidecarUrl, ExoplayerWrapper player) {
       this.context = context;
       this.userAgent = userAgent;
       this.url = url;
+      this.webVTTSidecarUrl = webVTTSidecarUrl;
       this.player = player;
       HlsPlaylistParser parser = new HlsPlaylistParser();
       playlistFetcher = new ManifestFetcher<>(url, new DefaultUriDataSource(context, userAgent),
@@ -176,54 +184,46 @@ public class HlsRendererBuilder implements RendererBuilder {
       MetadataTrackRenderer<List<Id3Frame>> id3Renderer = new MetadataTrackRenderer<>(
               sampleSource, new Id3Parser(), player, mainHandler.getLooper());
 
-      // Build the text renderer, preferring Webvtt where available.
+      // Priority of subtitles:
+      // 1. Embedded WebVTT
+      // 2. Sidecar WebVTT
+      // 3. Embedded CEA-608
+      
+      // Build the text renderer
       boolean preferWebvtt = false;
       if (manifest instanceof HlsMasterPlaylist) {
         preferWebvtt = !((HlsMasterPlaylist) manifest).subtitles.isEmpty();
       }
+      if (!preferWebvtt) {
+        preferWebvtt = webVTTSidecarUrl != null;
+      }
+
       TrackRenderer textRenderer;
       if (preferWebvtt) {
-        Log.d("HlsRendererBuilder", "loadingWebVtt");
+
         DataSource textDataSource = new DefaultUriDataSource(context, bandwidthMeter, userAgent);
         HlsChunkSource textChunkSource = new HlsChunkSource(false /* isMaster */, textDataSource,
                 url, manifest, DefaultHlsTrackSelector.newSubtitleInstance(), bandwidthMeter,
                 timestampAdjusterProvider, HlsChunkSource.ADAPTIVE_MODE_SPLICE);
-        HlsSampleSource textSampleSource = new HlsSampleSource(textChunkSource, loadControl,
-                TEXT_BUFFER_SEGMENTS * BUFFER_SEGMENT_SIZE, mainHandler, player, ExoplayerWrapper.TYPE_TEXT);
-//        MediaFormat mediaFormat = MediaFormat.createTextFormat("id", MimeTypes.TEXT_VTT, MediaFormat.NO_VALUE,
-//                C.MATCH_LONGEST_US, "en");
-//        SingleSampleSource textSampleSource = new SingleSampleSource(Uri.parse("https://html5multimedia.com/code/ch8/elephants-dream-subtitles-en.vtt"), textDataSource, mediaFormat);
-//        SingleSampleSource textSampleSource = new SingleSampleSource(Uri.parse("http://s3.amazonaws.com/curiosity-club/testing/hls_subs3/abc_enigmaman.vtt"), textDataSource, mediaFormat);
+
+        SampleSource textSampleSource;
+
+        // Embedded WebVTT
+        if (webVTTSidecarUrl == null) {
+          textSampleSource = new HlsSampleSource(textChunkSource, loadControl,
+                  TEXT_BUFFER_SEGMENTS * BUFFER_SEGMENT_SIZE, mainHandler, player, ExoplayerWrapper.TYPE_TEXT);
+        }
+        // Sidecar WebVTT
+        else {
+          MediaFormat mediaFormat = MediaFormat.createTextFormat("id", MimeTypes.TEXT_VTT, MediaFormat.NO_VALUE, C.MATCH_LONGEST_US, "en");
+          textSampleSource = new SingleSampleSource(Uri.parse(webVTTSidecarUrl), textDataSource, mediaFormat);
+        }
+
         textRenderer = new TextTrackRenderer(textSampleSource, player, mainHandler.getLooper());
-
-//        player.setCaptionListener(new ExoplayerWrapper.CaptionListener() {
-//          @Override
-//          public void onCues(List<Cue> cues) {
-//            Log.d("HlsRendererBuilder", "onCues");
-//            if (cues != null) {
-//              for (Cue cue : cues) {
-//                Log.d("HlsRendererBuilder", "cue: " + cue.text);
-//              }
-//            }
-//          }
-//        });
-//
-//        player.setTextListener(new ExoplayerWrapper.TextListener() {
-//          @Override
-//          public void onText(String text) {
-//            Log.d("HlsRendererBuilder", "onText: " + text);
-//          }
-//        });
-
 
       } else {
         textRenderer = new Eia608TrackRenderer(sampleSource, player, mainHandler.getLooper());
       }
-      Log.d("HlsRendererBuilder", "getSelectedTrack: " + player.getSelectedTrack(ExoplayerWrapper.TYPE_TEXT));
-      player.setSelectedTrack(ExoplayerWrapper.TYPE_TEXT, ExoPlayer.TRACK_DEFAULT);
-//      player.setSelectedTrack(ExoplayerWrapper.TYPE_TEXT, ExoplayerWrapper.DISABLED_TRACK);
-      Log.d("HlsRendererBuilder", "getSelectedTrack: " + player.getSelectedTrack(ExoplayerWrapper.TYPE_TEXT));
-
 
       TrackRenderer[] renderers = new TrackRenderer[ExoplayerWrapper.RENDERER_COUNT];
       renderers[ExoplayerWrapper.TYPE_VIDEO] = videoRenderer;

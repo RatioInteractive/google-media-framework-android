@@ -19,6 +19,7 @@ limitations under the License.
     <string name="select_an_action">Select an action&#8230;</string>
     <string name="overflow">Overflow</string>
     <string name="fullscreen_button">Fullscreen</string>
+    <string name="captions_button">Captions</string>
     <string name="time_duration">Duration</string>
     <string name="seekbar">Seekbar</string>
     <string name="time_current">Current time</string>
