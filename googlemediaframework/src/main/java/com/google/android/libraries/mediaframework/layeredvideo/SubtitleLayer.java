@@ -26,6 +26,7 @@ import com.google.android.exoplayer.text.SubtitleLayout;
 import com.google.android.libraries.mediaframework.R;
 import com.google.android.libraries.mediaframework.exoplayerextensions.ExoplayerWrapper;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.google.android.libraries.mediaframework.R.id.subtitles;
@@ -40,7 +41,6 @@ public class SubtitleLayer implements Layer, ExoplayerWrapper.TextListener, Exop
   /**
    * The text view that displays the subtitles.
    */
-//  private TextView subtitles;
   private SubtitleLayout subtitleLayout;
 
   /**
@@ -53,7 +53,6 @@ public class SubtitleLayer implements Layer, ExoplayerWrapper.TextListener, Exop
     LayoutInflater inflater = layerManager.getActivity().getLayoutInflater();
 
     view = (FrameLayout) inflater.inflate(R.layout.subtitle_layer, null);
-//    subtitles = (TextView) view.findViewById(subtitles);
     subtitleLayout = (SubtitleLayout) view.findViewById(subtitles);
 
     layerManager.getExoplayerWrapper().setTextListener(this);
@@ -73,7 +72,13 @@ public class SubtitleLayer implements Layer, ExoplayerWrapper.TextListener, Exop
   @Override
   public void onText(String text) {
     Log.d(TAG, "onText: " + text);
-//    this.subtitles.setText(text);
+    // TODO: TEST THIS
+    if (text != null) {
+      setVisibility(View.VISIBLE);
+      List<Cue> cues = new ArrayList<>();
+      cues.add(new Cue(text));
+      this.subtitleLayout.setCues(cues);
+    }
   }
 
   /**
@@ -87,16 +92,8 @@ public class SubtitleLayer implements Layer, ExoplayerWrapper.TextListener, Exop
 
   @Override
   public void onCues(List<Cue> cues) {
-    Log.d(TAG, "onCues: " + cues);
     if (cues != null) {
       setVisibility(View.VISIBLE);
-      String text = "";
-      for (Cue cue : cues) {
-        Log.d(TAG, "cue: " + cue.text);
-        text += cue.text + "\n";
-      }
-      Log.d(TAG, "text: " + text);
-//      this.subtitles.setText(text);
       this.subtitleLayout.setCues(cues);
     }
   }

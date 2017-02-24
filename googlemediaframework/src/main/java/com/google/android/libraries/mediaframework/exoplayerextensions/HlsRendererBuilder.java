@@ -188,7 +188,7 @@ public class HlsRendererBuilder implements RendererBuilder {
       // 1. Embedded WebVTT
       // 2. Sidecar WebVTT
       // 3. Embedded CEA-608
-      
+
       // Build the text renderer
       boolean preferWebvtt = false;
       if (manifest instanceof HlsMasterPlaylist) {
