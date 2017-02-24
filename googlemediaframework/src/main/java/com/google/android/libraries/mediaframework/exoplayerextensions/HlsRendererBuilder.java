@@ -191,8 +191,11 @@ public class HlsRendererBuilder implements RendererBuilder {
 
       // Build the text renderer
       boolean preferWebvtt = false;
+      boolean preferEmbeddedWebVtt = false;
+
       if (manifest instanceof HlsMasterPlaylist) {
         preferWebvtt = !((HlsMasterPlaylist) manifest).subtitles.isEmpty();
+        preferEmbeddedWebVtt = true;
       }
       if (!preferWebvtt) {
         preferWebvtt = webVTTSidecarUrl != null;
@@ -209,10 +212,11 @@ public class HlsRendererBuilder implements RendererBuilder {
         SampleSource textSampleSource;
 
         // Embedded WebVTT
-        if (webVTTSidecarUrl == null) {
+        if (preferEmbeddedWebVtt) {
           textSampleSource = new HlsSampleSource(textChunkSource, loadControl,
                   TEXT_BUFFER_SEGMENTS * BUFFER_SEGMENT_SIZE, mainHandler, player, ExoplayerWrapper.TYPE_TEXT);
         }
+
         // Sidecar WebVTT
         else {
           MediaFormat mediaFormat = MediaFormat.createTextFormat("id", MimeTypes.TEXT_VTT, MediaFormat.NO_VALUE, C.MATCH_LONGEST_US, "en");
