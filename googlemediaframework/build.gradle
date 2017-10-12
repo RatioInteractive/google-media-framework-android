@@ -15,7 +15,6 @@
  */
 
 apply plugin: 'com.android.library'
-//apply plugin: 'com.novoda.bintray-release'
 
 android {
     compileSdkVersion 19
@@ -45,14 +44,4 @@ android {
 
 dependencies {
     compile 'com.google.android.exoplayer:exoplayer:r1.5.7'
-}
-
-publish {
-    repoName = 'google-media-framework-android'
-    userOrg = 'google'
-    groupId = 'com.google.android.libraries.mediaframework'
-    artifactId = 'mediaframework'
-    version = '0.2.1'
-    description = 'Google Media Framework for Android.'
-    website = 'https://github.com/googleads/google-media-framework-android'
 }
