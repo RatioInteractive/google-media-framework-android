@@ -43,5 +43,5 @@ android {
 }
 
 dependencies {
-    implementation 'com.google.android.exoplayer:exoplayer:r1.5.7'
+    api 'com.google.android.exoplayer:exoplayer:r1.5.7'
 }
