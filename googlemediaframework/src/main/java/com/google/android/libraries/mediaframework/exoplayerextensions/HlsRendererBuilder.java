@@ -63,7 +63,6 @@ import com.google.android.libraries.mediaframework.streamroot.ExoPlayerInteracto
 
 import java.io.IOException;
 import java.util.List;
-import java.util.logging.Logger;
 
 import io.streamroot.dna.core.StreamrootDNA;
 import io.streamroot.dna.utils.stats.StatsView;
@@ -91,14 +90,20 @@ public class HlsRendererBuilder implements RendererBuilder {
   public static StreamrootDNA sStreamrootDNA;
   public static StreamStatsManager sStreamStatsMgr;
   public static StatsView sStatsView;
+  public static String sStreamOverride;
 
   public HlsRendererBuilder(Context context, String userAgent, String url, String webVTTSidecarUrl) {
     this.context = context;
     this.userAgent = userAgent;
-//    this.url = url;
     this.webVTTSidecarUrl = webVTTSidecarUrl;
 
-    this.url = "https://wowza-cdn.streamroot.io/vodOriginSite/tears_of_steel720p.mp4/playlist.m3u8";
+    if (sStreamOverride != null) {
+      this.url = sStreamOverride;
+    } else {
+      this.url = url;
+    }
+
+//    this.url = "https://wowza-cdn.streamroot.io/vodOriginSite/tears_of_steel720p.mp4/playlist.m3u8";
 //    this.url = "https://wowza-cdn.streamroot.io/liveorigin/stream4/playlist.m3u8";
 //    this.url = "https://demo-live.streamroot.io/index.m3u8";
   }
@@ -126,7 +131,6 @@ public class HlsRendererBuilder implements RendererBuilder {
     private final String webVTTSidecarUrl;
     private final ExoplayerWrapper player;
     private final ManifestFetcher<HlsPlaylist> playlistFetcher;
-    private Runnable tickRunnable;
 
     private boolean canceled;
 
@@ -150,29 +154,7 @@ public class HlsRendererBuilder implements RendererBuilder {
                 .start(Uri.parse(streamrootUrl));
 
         sStreamStatsMgr = StreamStatsManager.newStatsManager(HlsRendererBuilder.sStreamrootDNA, sStatsView).start();
-
-        final Handler h = new Handler();
-        tickRunnable = new Runnable() {
-          @Override
-          public void run() {
-            sStreamrootDNA.fetchStats(new StreamrootDNA.StatsCallback() {
-              @Override
-              public void onStats(long cdn, long p2p, long upload, int peers) {
-                Logger.getLogger(TAG).info("Streamroot onStreamroot stats");
-                Logger.getLogger(TAG).info("Streamroot cdn: " + cdn);
-                Logger.getLogger(TAG).info("Streamroot p2p: " + p2p);
-                Logger.getLogger(TAG).info("Streamroot upload: " + upload);
-                Logger.getLogger(TAG).info("Streamroot peers: " + peers);
-                h.postDelayed(tickRunnable, 1000);
-              }
-            });
-          }
-        };
-        h.postDelayed(tickRunnable, 1000);
-
         streamrootUrl = sStreamrootDNA.getManifestUrl().toString();
-        Logger.getLogger(TAG).info("Streamroot raw url: " + url);
-        Logger.getLogger(TAG).info("Streamroot manifest url: " + streamrootUrl);
 
       } catch (Exception e) {
         e.printStackTrace();
