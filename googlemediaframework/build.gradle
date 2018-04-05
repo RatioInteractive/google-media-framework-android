@@ -43,7 +43,7 @@ android {
 }
 
 dependencies {
-    api 'com.google.android.exoplayer:exoplayer:r1.5.7'
+    api 'com.bartoszlipinski:exoplayer1:r1.5.7'
 
     //StreamRoot
     api 'io.streamroot.dna:dna-core:2.1.3'
