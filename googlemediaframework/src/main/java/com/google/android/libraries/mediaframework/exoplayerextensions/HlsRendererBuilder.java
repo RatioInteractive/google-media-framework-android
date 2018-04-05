@@ -59,15 +59,22 @@ import com.google.android.exoplayer.util.ManifestFetcher;
 import com.google.android.exoplayer.util.ManifestFetcher.ManifestCallback;
 import com.google.android.exoplayer.util.MimeTypes;
 import com.google.android.libraries.mediaframework.exoplayerextensions.ExoplayerWrapper.RendererBuilder;
+import com.google.android.libraries.mediaframework.streamroot.ExoPlayerInteractor;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.logging.Logger;
+
+import io.streamroot.dna.core.StreamrootDNA;
+import io.streamroot.dna.utils.stats.StatsView;
+import io.streamroot.dna.utils.stats.StreamStatsManager;
 
 /**
  * A {@link RendererBuilder} for HLS.
  */
 public class HlsRendererBuilder implements RendererBuilder {
 
+  private static final String TAG = HlsRendererBuilder.class.getSimpleName();
   private static final int BUFFER_SEGMENT_SIZE = 64 * 1024;
   private static final int MAIN_BUFFER_SEGMENTS = 256;
   private static final int TEXT_BUFFER_SEGMENTS = 2;
@@ -80,6 +87,10 @@ public class HlsRendererBuilder implements RendererBuilder {
   private ExoplayerWrapper player;
 
   private AsyncRendererBuilder currentAsyncBuilder;
+
+  public static StreamrootDNA sStreamrootDNA;
+  public static StreamStatsManager sStreamStatsMgr;
+  public static StatsView sStatsView;
 
   public HlsRendererBuilder(Context context, String userAgent, String url, String webVTTSidecarUrl) {
     this.context = context;
@@ -111,18 +122,63 @@ public class HlsRendererBuilder implements RendererBuilder {
     private final String webVTTSidecarUrl;
     private final ExoplayerWrapper player;
     private final ManifestFetcher<HlsPlaylist> playlistFetcher;
+    private Runnable tickRunnable;
 
     private boolean canceled;
 
     public AsyncRendererBuilder(Context context, String userAgent, String url, String webVTTSidecarUrl, ExoplayerWrapper player) {
       this.context = context;
       this.userAgent = userAgent;
-      this.url = url;
+//      this.url = url;
       this.webVTTSidecarUrl = webVTTSidecarUrl;
       this.player = player;
       HlsPlaylistParser parser = new HlsPlaylistParser();
       playlistFetcher = new ManifestFetcher<>(url, new DefaultUriDataSource(context, userAgent),
               parser);
+
+      String streamrootKey = "9359e936-fec3-4e90-946a-6ca89571487a";
+      String rawUrl = "https://wowza-cdn.streamroot.io/vodOriginSite/tears_of_steel720p.mp4/playlist.m3u8";
+//      String rawUrl = "https://wowza-cdn.streamroot.io/liveorigin/stream4/playlist.m3u8";
+//      String rawUrl = "https://demo-live.streamroot.io/index.m3u8";
+      String streamrootUrl = rawUrl;
+
+      try {
+        sStreamrootDNA = StreamrootDNA.newBuilder()
+                .context(context)
+                .streamrootKey(streamrootKey)
+                .interactor(new ExoPlayerInteractor(player.getPlayer()))
+                .start(Uri.parse(streamrootUrl));
+
+        sStreamStatsMgr = StreamStatsManager.newStatsManager(HlsRendererBuilder.sStreamrootDNA, sStatsView).start();
+
+        final Handler h = new Handler();
+        tickRunnable = new Runnable() {
+          @Override
+          public void run() {
+            sStreamrootDNA.fetchStats(new StreamrootDNA.StatsCallback() {
+              @Override
+              public void onStats(long cdn, long p2p, long upload, int peers) {
+                Logger.getLogger(TAG).info("Streamroot onStreamroot stats");
+                Logger.getLogger(TAG).info("Streamroot cdn: " + cdn);
+                Logger.getLogger(TAG).info("Streamroot p2p: " + p2p);
+                Logger.getLogger(TAG).info("Streamroot upload: " + upload);
+                Logger.getLogger(TAG).info("Streamroot peers: " + peers);
+                h.postDelayed(tickRunnable, 1000);
+              }
+            });
+          }
+        };
+        h.postDelayed(tickRunnable, 1000);
+
+        streamrootUrl = sStreamrootDNA.getManifestUrl().toString();
+        Logger.getLogger(TAG).info("Streamroot raw url: " + rawUrl);
+        Logger.getLogger(TAG).info("Streamroot manifest url: " + streamrootUrl);
+
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+
+      this.url = streamrootUrl;
     }
 
     public void init() {

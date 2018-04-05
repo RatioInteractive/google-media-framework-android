@@ -52,7 +52,6 @@ import com.google.android.exoplayer.upstream.DefaultBandwidthMeter;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -959,5 +958,7 @@ public class ExoplayerWrapper implements ExoPlayer.Listener, ChunkSampleSource.E
     textListener.onText(text);
   }
 
-
+  public ExoPlayer getPlayer() {
+    return player;
+  }
 }
