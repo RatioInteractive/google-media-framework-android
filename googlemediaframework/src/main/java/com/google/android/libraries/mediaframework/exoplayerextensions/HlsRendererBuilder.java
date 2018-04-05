@@ -95,8 +95,12 @@ public class HlsRendererBuilder implements RendererBuilder {
   public HlsRendererBuilder(Context context, String userAgent, String url, String webVTTSidecarUrl) {
     this.context = context;
     this.userAgent = userAgent;
-    this.url = url;
+//    this.url = url;
     this.webVTTSidecarUrl = webVTTSidecarUrl;
+
+    this.url = "https://wowza-cdn.streamroot.io/vodOriginSite/tears_of_steel720p.mp4/playlist.m3u8";
+//    this.url = "https://wowza-cdn.streamroot.io/liveorigin/stream4/playlist.m3u8";
+//    this.url = "https://demo-live.streamroot.io/index.m3u8";
   }
 
   @Override
@@ -133,14 +137,10 @@ public class HlsRendererBuilder implements RendererBuilder {
       this.webVTTSidecarUrl = webVTTSidecarUrl;
       this.player = player;
       HlsPlaylistParser parser = new HlsPlaylistParser();
-      playlistFetcher = new ManifestFetcher<>(url, new DefaultUriDataSource(context, userAgent),
-              parser);
+
 
       String streamrootKey = "9359e936-fec3-4e90-946a-6ca89571487a";
-      String rawUrl = "https://wowza-cdn.streamroot.io/vodOriginSite/tears_of_steel720p.mp4/playlist.m3u8";
-//      String rawUrl = "https://wowza-cdn.streamroot.io/liveorigin/stream4/playlist.m3u8";
-//      String rawUrl = "https://demo-live.streamroot.io/index.m3u8";
-      String streamrootUrl = rawUrl;
+      String streamrootUrl = url;
 
       try {
         sStreamrootDNA = StreamrootDNA.newBuilder()
@@ -171,7 +171,7 @@ public class HlsRendererBuilder implements RendererBuilder {
         h.postDelayed(tickRunnable, 1000);
 
         streamrootUrl = sStreamrootDNA.getManifestUrl().toString();
-        Logger.getLogger(TAG).info("Streamroot raw url: " + rawUrl);
+        Logger.getLogger(TAG).info("Streamroot raw url: " + url);
         Logger.getLogger(TAG).info("Streamroot manifest url: " + streamrootUrl);
 
       } catch (Exception e) {
@@ -179,6 +179,7 @@ public class HlsRendererBuilder implements RendererBuilder {
       }
 
       this.url = streamrootUrl;
+      playlistFetcher = new ManifestFetcher<>(this.url, new DefaultUriDataSource(context, userAgent), parser);
     }
 
     public void init() {
